@@ -11,6 +11,11 @@
   },
   "dependencies": {
     "@huggingface/inference": "^2.8.1",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.16.5",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/pg": "^8.11.10",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
@@ -19,16 +24,9 @@
     "pdf-parse": "^1.1.1",
     "pg": "^8.13.0",
     "pgvector": "^0.2.0",
-    "unpdf": "^1.8.1"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.16.5",
-    "@types/pdf-parse": "^1.1.5",
-    "@types/pg": "^8.11.10",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "unpdf": "^1.8.1"
   }
 }
