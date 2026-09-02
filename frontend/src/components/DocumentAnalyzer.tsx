@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { api, DocumentRecord, DocumentChunkRecord } from '../lib/api';
+import { offlineStorage } from '../lib/offlineStorage';
+import { offlineAiEngine } from '../lib/offlineAiEngine';
 import {
   FileText,
   Upload,
@@ -23,6 +25,7 @@ import {
   Info,
   Layers,
   FileCode,
+  WifiOff,
 } from 'lucide-react';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,7 +39,11 @@ interface DocMessage {
   chunksUsed?: DocumentChunkRecord[];
 }
 
-export const DocumentAnalyzer: React.FC = () => {
+interface DocumentAnalyzerProps {
+  isOnline?: boolean;
+}
+
+export const DocumentAnalyzer: React.FC<DocumentAnalyzerProps> = ({ isOnline = true }) => {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [messages, setMessages] = useState<DocMessage[]>([]);
@@ -60,8 +67,15 @@ export const DocumentAnalyzer: React.FC = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load existing documents on mount
+  // Load existing documents on mount (cached first)
   useEffect(() => {
+    const cachedDocs = offlineStorage.getDocuments();
+    if (cachedDocs.length > 0) {
+      setDocuments(cachedDocs);
+      if (!selectedDocId) {
+        setSelectedDocId(cachedDocs[0].id);
+      }
+    }
     fetchDocs();
   }, []);
 
@@ -69,11 +83,12 @@ export const DocumentAnalyzer: React.FC = () => {
     try {
       const docs = await api.getDocuments();
       setDocuments(docs);
+      offlineStorage.saveDocuments(docs);
       if (docs.length > 0 && !selectedDocId) {
         setSelectedDocId(docs[0].id);
       }
     } catch (err) {
-      console.error('Error fetching documents:', err);
+      console.warn('Backend unavailable, using cached documents:', err);
     }
   };
 
@@ -129,26 +144,53 @@ export const DocumentAnalyzer: React.FC = () => {
     if (inputTab === 'file' && !selectedFile) return;
 
     setIsIngesting(true);
+    const ext = selectedFile?.name.split('.').pop()?.toLowerCase() || 'txt';
+    const cleanContent = inputTab === 'paste' ? uploadContent.trim() : (uploadContent || `[File: ${selectedFile?.name}]`);
+
     try {
-      const ext = selectedFile?.name.split('.').pop()?.toLowerCase() || 'txt';
       let doc: DocumentRecord;
 
-      if (inputTab === 'file' && fileBase64) {
-        doc = await api.processDocument(
-          uploadTitle.trim(),
-          undefined,
-          ext,
-          fileBase64
-        );
+      if (isOnline) {
+        if (inputTab === 'file' && fileBase64) {
+          doc = await api.processDocument(uploadTitle.trim(), undefined, ext, fileBase64);
+        } else {
+          doc = await api.processDocument(uploadTitle.trim(), uploadContent.trim(), 'txt');
+        }
       } else {
-        doc = await api.processDocument(
-          uploadTitle.trim(),
-          uploadContent.trim(),
-          'txt'
-        );
+        // Offline Ingestion Simulation
+        const words = cleanContent.split(/\s+/).filter(Boolean);
+        const chunkLength = 80;
+        const chunkCount = Math.max(1, Math.ceil(words.length / chunkLength));
+        const mockChunks: DocumentChunkRecord[] = [];
+
+        for (let i = 0; i < chunkCount; i++) {
+          const chunkWords = words.slice(i * chunkLength, (i + 1) * chunkLength);
+          mockChunks.push({
+            id: `offline-chunk-${Date.now()}-${i}`,
+            documentId: `offline-doc-${Date.now()}`,
+            chunkContent: chunkWords.join(' '),
+            chunkIndex: i + 1,
+            similarity: 0.9,
+            createdAt: new Date().toISOString(),
+          });
+        }
+
+        doc = {
+          id: `offline-doc-${Date.now()}`,
+          userId: 'offline-user',
+          title: uploadTitle.trim(),
+          fileType: ext,
+          content: cleanContent,
+          wordCount: words.length,
+          chunkCount,
+          createdAt: new Date().toISOString(),
+        };
+
+        offlineStorage.addDocument(doc, mockChunks);
       }
 
       setDocuments((prev) => [doc, ...prev]);
+      offlineStorage.addDocument(doc);
       setSelectedDocId(doc.id);
       setIsUploadModalOpen(false);
       setUploadTitle('');
@@ -163,12 +205,12 @@ export const DocumentAnalyzer: React.FC = () => {
           role: 'assistant',
           content: `Successfully ingested document **"${doc.title}"** (\`.${doc.fileType.toUpperCase()}\`)! Parsed & vectorized into **${doc.chunkCount} semantic chunks** (${doc.wordCount} words).\n\nAsk any targeted question about this document below.`,
           createdAt: new Date().toISOString(),
-          modelUsed: 'Vector Chunk Engine',
+          modelUsed: isOnline ? 'Vector Chunk Engine' : 'Offline Local Indexer',
         },
       ]);
     } catch (err: any) {
       console.error('Error processing document:', err);
-      alert(`Failed to process document: ${err.response?.data?.error || err.message}`);
+      alert(`Notice: ${err.response?.data?.error || err.message}`);
     } finally {
       setIsIngesting(false);
     }
@@ -179,19 +221,23 @@ export const DocumentAnalyzer: React.FC = () => {
     e.stopPropagation();
     if (!confirm('Are you sure you want to delete this document and its vector embeddings?')) return;
     try {
-      await api.deleteDocument(id);
-      const updated = documents.filter((d) => d.id !== id);
-      setDocuments(updated);
-      if (selectedDocId === id) {
-        setSelectedDocId(updated.length > 0 ? updated[0].id : null);
-        setMessages([]);
+      if (isOnline) {
+        await api.deleteDocument(id);
       }
     } catch (err) {
-      console.error('Error deleting document:', err);
+      console.warn('Offline delete doc:', err);
+    }
+
+    const updated = documents.filter((d) => d.id !== id);
+    setDocuments(updated);
+    offlineStorage.deleteDocument(id);
+    if (selectedDocId === id) {
+      setSelectedDocId(updated.length > 0 ? updated[0].id : null);
+      setMessages([]);
     }
   };
 
-  // Send RAG Query
+  // Send RAG Query (with Offline fallback)
   const handleSendQuery = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!questionText.trim() || !selectedDocId || isQuerying) return;
@@ -209,6 +255,23 @@ export const DocumentAnalyzer: React.FC = () => {
     setMessages((prev) => [...prev, userMsg]);
     setIsQuerying(true);
 
+    if (!isOnline) {
+      setTimeout(() => {
+        const { answer, chunksUsed } = offlineAiEngine.queryOfflineDocument(selectedDocId, userQ);
+        const aiMsg: DocMessage = {
+          id: `offline-doc-ai-${Date.now()}`,
+          role: 'assistant',
+          content: answer,
+          createdAt: new Date().toISOString(),
+          modelUsed: 'Offline Vector Chunk Engine',
+          chunksUsed,
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+        setIsQuerying(false);
+      }, 400);
+      return;
+    }
+
     try {
       const response = await api.queryDocument(selectedDocId, userQ);
 
@@ -223,14 +286,17 @@ export const DocumentAnalyzer: React.FC = () => {
 
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err: any) {
-      console.error('Error querying document:', err);
-      const errorMsg: DocMessage = {
-        id: `err-${Date.now()}`,
+      console.warn('Online query failed, using offline chunk retrieval:', err);
+      const { answer, chunksUsed } = offlineAiEngine.queryOfflineDocument(selectedDocId, userQ);
+      const aiMsg: DocMessage = {
+        id: `offline-doc-ai-${Date.now()}`,
         role: 'assistant',
-        content: `*(Error: Unable to analyze document. Ensure backend is running.)*`,
+        content: answer,
         createdAt: new Date().toISOString(),
+        modelUsed: 'Offline Vector Chunk Engine',
+        chunksUsed,
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [...prev, aiMsg]);
     } finally {
       setIsQuerying(false);
     }

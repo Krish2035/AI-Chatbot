@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Brain, Cpu, Database, Sparkles, Settings, FileSearch, MessageSquare, Menu } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Brain, Cpu, Database, Sparkles, Settings, FileSearch, MessageSquare, Menu, Download, WifiOff, Wifi } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSettings: () => void;
@@ -9,6 +9,7 @@ interface HeaderProps {
   activeViewMode: 'chat' | 'doc-analysis';
   onToggleViewMode: (mode: 'chat' | 'doc-analysis') => void;
   onToggleSidebar?: () => void;
+  isOnline?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,7 +18,43 @@ export const Header: React.FC<HeaderProps> = ({
   activeViewMode,
   onToggleViewMode,
   onToggleSidebar,
+  isOnline = true,
 }) => {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Also check if running in standalone mode
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstallable(false);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      alert('To install NeuroChat AI on your device:\n• On Chrome/Edge: Click the Install icon in the address bar.\n• On iOS Safari: Tap Share -> Add to Home Screen.\n• On Android: Tap menu (3 dots) -> Install App.');
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+    }
+    setDeferredPrompt(null);
+  };
+
   return (
     <header className="h-16 border-b border-white/10 glass-panel px-3 sm:px-6 flex items-center justify-between z-20 sticky top-0 shrink-0">
       <div className="flex items-center space-x-2 sm:space-x-3">
@@ -46,14 +83,36 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
           <p className="text-[10px] sm:text-xs text-gray-400 flex items-center space-x-1 sm:space-x-2 truncate">
-            <span>Groq Llama 3</span>
-            <span>•</span>
-            <span>HF Embeddings</span>
+            {isOnline ? (
+              <>
+                <span>Groq Llama 3</span>
+                <span>•</span>
+                <span>HF Embeddings</span>
+              </>
+            ) : (
+              <span className="text-amber-400 font-medium flex items-center space-x-1">
+                <WifiOff className="w-3 h-3 inline" />
+                <span>Offline PWA Engine</span>
+              </span>
+            )}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center space-x-2 sm:space-x-3">
+      <div className="flex items-center space-x-1.5 sm:space-x-3">
+        {/* Install PWA Button */}
+        {isInstallable && (
+          <button
+            onClick={handleInstallClick}
+            className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 text-emerald-300 hover:text-white border border-emerald-500/40 hover:border-emerald-400 transition-all shadow-sm cursor-pointer shrink-0"
+            title="Install NeuroChat AI as a standalone PWA application on your phone or computer"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-400 animate-bounce" />
+            <span className="hidden xs:inline">Install App</span>
+            <span className="xs:hidden">Install</span>
+          </button>
+        )}
+
         {/* Document Analysis Toggle Button */}
         <button
           onClick={() => onToggleViewMode(activeViewMode === 'chat' ? 'doc-analysis' : 'chat')}
@@ -80,19 +139,29 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </button>
 
-        {/* Memory status indicator (Desktop / Tablet) */}
+        {/* Network & Memory status indicator */}
         <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full glass-pill text-xs shrink-0">
-          <Database className={`w-3.5 h-3.5 ${isDbConnected ? 'text-emerald-400' : 'text-amber-400'}`} />
-          <span className="text-gray-300 hidden lg:inline">
-            {isDbConnected ? 'pgvector Active' : 'Memory Fallback'}
-          </span>
-          <span className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+          {isOnline ? (
+            <>
+              <Database className={`w-3.5 h-3.5 ${isDbConnected ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <span className="text-gray-300 hidden lg:inline">
+                {isDbConnected ? 'pgvector Active' : 'Memory Fallback'}
+              </span>
+              <span className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            </>
+          ) : (
+            <>
+              <WifiOff className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-amber-300 font-medium hidden lg:inline">Offline Mode</span>
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            </>
+          )}
         </div>
 
         {/* Engine status indicator (Desktop) */}
         <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full glass-pill text-xs shrink-0">
-          <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="text-gray-300">Groq Engine</span>
+          <Cpu className={`w-3.5 h-3.5 ${isOnline ? 'text-cyan-400' : 'text-amber-400'}`} />
+          <span className="text-gray-300">{isOnline ? 'Groq Engine' : 'Local Offline Engine'}</span>
         </div>
 
         <button

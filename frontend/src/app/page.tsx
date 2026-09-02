@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { api, Session, Message, RecalledMemory } from '../lib/api';
+import { offlineStorage } from '../lib/offlineStorage';
+import { offlineAiEngine } from '../lib/offlineAiEngine';
 import { Header } from '../components/Header';
 import { Sidebar } from '../components/Sidebar';
 import { ChatWindow } from '../components/ChatWindow';
@@ -18,6 +20,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isDbConnected, setIsDbConnected] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isOnline, setIsOnline] = useState<boolean>(true);
 
   // Modals state
   const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
@@ -25,116 +28,233 @@ export default function Home() {
   const [inspectedQuery, setInspectedQuery] = useState<string | undefined>();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // 1. Initial health check & fetch sessions
+  // 1. Connection listener
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsOnline(navigator.onLine);
+
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
+
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
+  }, []);
+
+  // 2. Initial health check & fetch sessions (with offline caching)
   useEffect(() => {
     async function init() {
-      const health = await api.checkHealth();
-      setIsDbConnected(health.databaseConnected || false);
+      // First load from offline storage for instant PWA startup
+      const cachedSessions = offlineStorage.getSessions();
+      if (cachedSessions.length > 0) {
+        setSessions(cachedSessions);
+        setActiveSessionId(cachedSessions[0].id);
+      }
 
       try {
+        const health = await api.checkHealth();
+        setIsDbConnected(health.databaseConnected || false);
+        setIsOnline(true);
+
         const fetchedSessions = await api.getSessions();
-        setSessions(fetchedSessions);
         if (fetchedSessions.length > 0) {
-          setActiveSessionId(fetchedSessions[0].id);
+          setSessions(fetchedSessions);
+          offlineStorage.saveSessions(fetchedSessions);
+          setActiveSessionId((prev) => prev || fetchedSessions[0].id);
         }
       } catch (err) {
-        console.error('Error fetching sessions:', err);
+        console.warn('Backend offline or unreachable, using offline storage:', err);
+        setIsOnline(false);
       }
     }
     init();
   }, []);
 
-  // 2. Fetch messages whenever activeSessionId changes
+  // 3. Fetch messages whenever activeSessionId changes
   useEffect(() => {
     if (!activeSessionId) {
       setMessages([]);
       return;
     }
 
+    // Immediately load cached messages
+    const cachedMsgs = offlineStorage.getMessages(activeSessionId);
+    if (cachedMsgs.length > 0) {
+      setMessages(cachedMsgs);
+    }
+
     async function loadMessages() {
       try {
         const msgs = await api.getMessages(activeSessionId!);
         setMessages(msgs);
+        offlineStorage.saveMessages(activeSessionId!, msgs);
       } catch (err) {
-        console.error('Error fetching messages:', err);
+        console.warn('Could not fetch remote messages, showing offline cache:', err);
       }
     }
-    loadMessages();
+
+    if (navigator.onLine) {
+      loadMessages();
+    }
   }, [activeSessionId]);
 
   // Handle New Session
   const handleNewSession = async () => {
+    const newTitle = 'New Conversation';
+    const tempId = `sess-${Date.now()}`;
+    const newSess: Session = {
+      id: tempId,
+      title: newTitle,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setActiveViewMode('chat');
+    setIsSidebarOpen(false);
+
     try {
-      setActiveViewMode('chat');
-      const newSess = await api.createSession('New Conversation');
+      if (isOnline) {
+        const createdSess = await api.createSession(newTitle);
+        setSessions((prev) => [createdSess, ...prev]);
+        setActiveSessionId(createdSess.id);
+        offlineStorage.addSession(createdSess);
+      } else {
+        setSessions((prev) => [newSess, ...prev]);
+        setActiveSessionId(newSess.id);
+        offlineStorage.addSession(newSess);
+      }
+      setMessages([]);
+    } catch (err) {
+      console.warn('Offline session fallback:', err);
       setSessions((prev) => [newSess, ...prev]);
       setActiveSessionId(newSess.id);
+      offlineStorage.addSession(newSess);
       setMessages([]);
-      setIsSidebarOpen(false);
-    } catch (err) {
-      console.error('Error creating new session:', err);
     }
   };
 
   // Handle Delete Session
   const handleDeleteSession = async (id: string) => {
     try {
-      await api.deleteSession(id);
-      const updated = sessions.filter((s) => s.id !== id);
-      setSessions(updated);
-      if (activeSessionId === id) {
-        setActiveSessionId(updated.length > 0 ? updated[0].id : null);
+      if (isOnline) {
+        await api.deleteSession(id);
       }
     } catch (err) {
-      console.error('Error deleting session:', err);
+      console.warn('Offline delete session:', err);
+    }
+
+    const updated = sessions.filter((s) => s.id !== id);
+    setSessions(updated);
+    offlineStorage.deleteSession(id);
+    if (activeSessionId === id) {
+      setActiveSessionId(updated.length > 0 ? updated[0].id : null);
     }
   };
 
-  // Handle Send Message
+  // Handle Send Message (with Offline AI Engine fallback)
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
 
-    // Optimistic user message insertion
-    const tempUserMsg: Message = {
-      id: `temp-${Date.now()}`,
-      sessionId: activeSessionId || '',
+    const currentSessId = activeSessionId || `offline-sess-${Date.now()}`;
+    if (!activeSessionId) {
+      setActiveSessionId(currentSessId);
+      const newSess: Session = {
+        id: currentSessId,
+        title: content.slice(0, 30) + (content.length > 30 ? '...' : ''),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setSessions((prev) => [newSess, ...prev]);
+      offlineStorage.addSession(newSess);
+    }
+
+    const userMsg: Message = {
+      id: `user-${Date.now()}`,
+      sessionId: currentSessId,
       role: 'user',
       content,
       createdAt: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, tempUserMsg]);
+    const updatedWithUser = [...messages, userMsg];
+    setMessages(updatedWithUser);
+    offlineStorage.saveMessages(currentSessId, updatedWithUser);
     setIsLoading(true);
 
-    try {
-      const response = await api.sendMessage(content, activeSessionId || undefined);
+    // If Offline or if backend fails, engage Offline AI Engine
+    if (!isOnline) {
+      setTimeout(() => {
+        const { reply, recalledMemories } = offlineAiEngine.generateChatResponse(
+          content,
+          currentSessId,
+          updatedWithUser
+        );
 
-      // If a new session was auto-created by backend
+        const aiMsg: Message = {
+          id: `offline-ai-${Date.now()}`,
+          sessionId: currentSessId,
+          role: 'assistant',
+          content: reply,
+          createdAt: new Date().toISOString(),
+          modelUsed: 'Offline Neural Engine',
+          recalledMemories,
+        };
+
+        const finalMsgs = [...updatedWithUser, aiMsg];
+        setMessages(finalMsgs);
+        offlineStorage.saveMessages(currentSessId, finalMsgs);
+        setIsLoading(false);
+      }, 400);
+      return;
+    }
+
+    try {
+      const response = await api.sendMessage(content, currentSessId);
+
       if (!activeSessionId && response.sessionId) {
         setActiveSessionId(response.sessionId);
         const fetchedSessions = await api.getSessions();
         setSessions(fetchedSessions);
+        offlineStorage.saveSessions(fetchedSessions);
       }
 
-      // Replace optimistic message and add AI response
-      setMessages((prev) => {
-        const filtered = prev.filter((m) => !m.id.startsWith('temp-'));
-        return [...filtered, response.userMessage, response.assistantMessage];
-      });
+      const finalMsgs = [...messages, response.userMessage, response.assistantMessage];
+      setMessages(finalMsgs);
+      offlineStorage.saveMessages(currentSessId, finalMsgs);
 
-      // Update session title in list if necessary
-      const updatedSessions = await api.getSessions();
-      setSessions(updatedSessions);
+      // Refresh sessions
+      api.getSessions().then((s) => {
+        setSessions(s);
+        offlineStorage.saveSessions(s);
+      }).catch(() => {});
     } catch (err: any) {
-      console.error('Error sending message:', err);
-      const errorMsg: Message = {
-        id: `err-${Date.now()}`,
-        sessionId: activeSessionId || '',
+      console.warn('Online request failed, transitioning to Offline Engine:', err);
+      setIsOnline(false);
+
+      const { reply, recalledMemories } = offlineAiEngine.generateChatResponse(
+        content,
+        currentSessId,
+        updatedWithUser
+      );
+
+      const aiMsg: Message = {
+        id: `offline-ai-${Date.now()}`,
+        sessionId: currentSessId,
         role: 'assistant',
-        content: `*(Backend Communication Notice: Unable to reach backend API server. Make sure the Node.js Express backend is running on port 5000)*`,
+        content: reply,
         createdAt: new Date().toISOString(),
+        modelUsed: 'Offline Neural Engine',
+        recalledMemories,
       };
-      setMessages((prev) => [...prev, errorMsg]);
+
+      const finalMsgs = [...updatedWithUser, aiMsg];
+      setMessages(finalMsgs);
+      offlineStorage.saveMessages(currentSessId, finalMsgs);
     } finally {
       setIsLoading(false);
     }
@@ -148,7 +268,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-950">
-      {/* Top Header */}
+      {/* Top Header with Offline Indicator & PWA Install */}
       <Header
         onOpenSettings={() => setIsSettingsOpen(true)}
         isDbConnected={isDbConnected}
@@ -158,6 +278,7 @@ export default function Home() {
           setIsSidebarOpen(false);
         }}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        isOnline={isOnline}
       />
 
       {/* Main App Body */}
@@ -179,7 +300,7 @@ export default function Home() {
 
         {/* View Switcher: Document Analyzer vs Chat Timeline */}
         {activeViewMode === 'doc-analysis' ? (
-          <DocumentAnalyzer />
+          <DocumentAnalyzer isOnline={isOnline} />
         ) : (
           <main className="flex-1 flex flex-col h-full bg-gradient-to-b from-slate-950 via-slate-900/60 to-slate-950 overflow-hidden relative min-w-0">
             <ChatWindow
