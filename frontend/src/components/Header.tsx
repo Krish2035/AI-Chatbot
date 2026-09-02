@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Brain, Cpu, Database, Sparkles, Settings, FileSearch, MessageSquare } from 'lucide-react';
+import { Brain, Cpu, Database, Sparkles, Settings, FileSearch, MessageSquare, Menu } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSettings: () => void;
   isDbConnected: boolean;
   activeViewMode: 'chat' | 'doc-analysis';
   onToggleViewMode: (mode: 'chat' | 'doc-analysis') => void;
+  onToggleSidebar?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,25 +16,36 @@ export const Header: React.FC<HeaderProps> = ({
   isDbConnected,
   activeViewMode,
   onToggleViewMode,
+  onToggleSidebar,
 }) => {
   return (
-    <header className="h-16 border-b border-white/10 glass-panel px-6 flex items-center justify-between z-10 sticky top-0">
-      <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-600 p-[1px] shadow-glow-cyan">
+    <header className="h-16 border-b border-white/10 glass-panel px-3 sm:px-6 flex items-center justify-between z-20 sticky top-0 shrink-0">
+      <div className="flex items-center space-x-2 sm:space-x-3">
+        {/* Mobile Sidebar Hamburger Toggle */}
+        <button
+          onClick={onToggleSidebar}
+          className="md:hidden p-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 glass-pill transition-colors shrink-0"
+          title="Open Conversation History"
+          aria-label="Open Sidebar"
+        >
+          <Menu className="w-5 h-5 text-cyan-400" />
+        </button>
+
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-600 p-[1px] shadow-glow-cyan shrink-0">
           <div className="w-full h-full bg-slate-950/80 rounded-[11px] flex items-center justify-center">
-            <Brain className="w-5 h-5 text-cyan-400 animate-pulse-slow" />
+            <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 animate-pulse-slow" />
           </div>
         </div>
         <div>
-          <div className="flex items-center space-x-2">
-            <h1 className="font-bold text-lg text-white tracking-wide">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
+            <h1 className="font-bold text-base sm:text-lg text-white tracking-wide truncate">
               NeuroChat <span className="text-gradient">AI</span>
             </h1>
-            <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-              {activeViewMode === 'doc-analysis' ? 'Doc RAG Engine' : 'Vector Memory'}
+            <span className="hidden xs:inline-block text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              {activeViewMode === 'doc-analysis' ? 'Doc RAG' : 'Vector Memory'}
             </span>
           </div>
-          <p className="text-xs text-gray-400 flex items-center space-x-2">
+          <p className="text-[10px] sm:text-xs text-gray-400 flex items-center space-x-1 sm:space-x-2 truncate">
             <span>Groq Llama 3</span>
             <span>•</span>
             <span>HF Embeddings</span>
@@ -41,11 +53,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center space-x-3">
-        {/* Document Analysis Toggle Button (Positioned in red box area) */}
+      <div className="flex items-center space-x-2 sm:space-x-3">
+        {/* Document Analysis Toggle Button */}
         <button
           onClick={() => onToggleViewMode(activeViewMode === 'chat' ? 'doc-analysis' : 'chat')}
-          className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-md cursor-pointer ${
+          className={`flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-md cursor-pointer shrink-0 ${
             activeViewMode === 'doc-analysis'
               ? 'bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 text-white shadow-glow-cyan border border-cyan-400/50'
               : 'bg-slate-900/90 text-cyan-300 hover:text-white border border-cyan-500/40 hover:border-cyan-400 hover:bg-cyan-500/20 glass-pill'
@@ -54,39 +66,41 @@ export const Header: React.FC<HeaderProps> = ({
         >
           {activeViewMode === 'doc-analysis' ? (
             <>
-              <MessageSquare className="w-4 h-4 text-white" />
-              <span>Back to Chat</span>
+              <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+              <span className="hidden xs:inline">Back to Chat</span>
+              <span className="xs:hidden">Chat</span>
             </>
           ) : (
             <>
-              <FileSearch className="w-4 h-4 text-cyan-400 animate-pulse" />
-              <span>Document Analyze</span>
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <FileSearch className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 animate-pulse" />
+              <span className="hidden xs:inline">Document Analyze</span>
+              <span className="xs:hidden">Doc RAG</span>
+              <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 hidden sm:inline" />
             </>
           )}
         </button>
 
-        {/* Memory status indicator */}
-        <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full glass-pill text-xs">
+        {/* Memory status indicator (Desktop / Tablet) */}
+        <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full glass-pill text-xs shrink-0">
           <Database className={`w-3.5 h-3.5 ${isDbConnected ? 'text-emerald-400' : 'text-amber-400'}`} />
-          <span className="text-gray-300">
+          <span className="text-gray-300 hidden lg:inline">
             {isDbConnected ? 'pgvector Active' : 'Memory Fallback'}
           </span>
           <span className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
         </div>
 
-        {/* Engine status indicator */}
-        <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full glass-pill text-xs">
+        {/* Engine status indicator (Desktop) */}
+        <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full glass-pill text-xs shrink-0">
           <Cpu className="w-3.5 h-3.5 text-cyan-400" />
           <span className="text-gray-300">Groq Engine</span>
         </div>
 
         <button
           onClick={onOpenSettings}
-          className="p-2 rounded-xl glass-pill text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+          className="p-2 rounded-xl glass-pill text-gray-300 hover:text-white hover:bg-white/10 transition-colors shrink-0"
           title="Engine & Memory Settings"
         >
-          <Settings className="w-5 h-5" />
+          <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
     </header>

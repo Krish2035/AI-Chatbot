@@ -243,27 +243,27 @@ export const DocumentAnalyzer: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden relative">
+    <div className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden relative min-w-0">
       {/* Top Banner / Active Document Bar */}
-      <div className="px-6 py-3 border-b border-white/10 glass-panel flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
-            <FileText className="w-5 h-5" />
+      <div className="px-3 sm:px-6 py-2.5 sm:py-3 border-b border-white/10 glass-panel flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 shrink-0">
+        <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+          <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shrink-0">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
-                Active Document:
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="text-[10px] sm:text-xs font-bold text-gray-300 uppercase tracking-wider shrink-0">
+                Active Doc:
               </span>
               {documents.length > 0 ? (
-                <div className="relative group">
+                <div className="relative group max-w-full">
                   <select
                     value={selectedDocId || ''}
                     onChange={(e) => {
                       setSelectedDocId(e.target.value);
                       setMessages([]);
                     }}
-                    className="bg-slate-900 text-cyan-300 text-sm font-semibold rounded-lg px-3 py-1 border border-cyan-500/40 focus:outline-none cursor-pointer hover:border-cyan-400 pr-8"
+                    className="bg-slate-900 text-cyan-300 text-xs sm:text-sm font-semibold rounded-lg px-2.5 sm:px-3 py-1 border border-cyan-500/40 focus:outline-none cursor-pointer hover:border-cyan-400 max-w-[200px] xs:max-w-[260px] sm:max-w-none truncate"
                   >
                     {documents.map((doc) => (
                       <option key={doc.id} value={doc.id}>
@@ -277,10 +277,10 @@ export const DocumentAnalyzer: React.FC = () => {
               )}
             </div>
             {activeDoc && (
-              <p className="text-[11px] text-gray-400 flex items-center space-x-2 mt-0.5">
-                <span>Type: <code className="text-purple-300">{activeDoc.fileType.toUpperCase()}</code></span>
+              <p className="text-[10px] sm:text-[11px] text-gray-400 flex items-center space-x-1.5 sm:space-x-2 mt-0.5 truncate">
+                <span>Type: <code className="text-purple-300 font-mono">{activeDoc.fileType.toUpperCase()}</code></span>
                 <span>•</span>
-                <span>{activeDoc.chunkCount} Vector Chunks</span>
+                <span>{activeDoc.chunkCount} Chunks</span>
                 <span>•</span>
                 <span>{activeDoc.wordCount} Words</span>
               </p>
@@ -288,62 +288,62 @@ export const DocumentAnalyzer: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-end space-x-2 sm:space-x-3 shrink-0">
           {activeDoc && (
             <button
               onClick={(e) => handleDeleteDoc(activeDoc.id, e)}
-              className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-medium transition-colors flex items-center space-x-1.5 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-medium transition-colors flex items-center space-x-1 cursor-pointer shrink-0"
               title="Delete Document"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete Doc</span>
+              <span>Delete</span>
             </button>
           )}
 
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-medium text-xs shadow-glow-cyan flex items-center space-x-2 transition-all cursor-pointer transform active:scale-95"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-medium text-xs shadow-glow-cyan flex items-center space-x-1.5 sm:space-x-2 transition-all cursor-pointer transform active:scale-95 shrink-0"
           >
             <Plus className="w-4 h-4" />
-            <span>Upload New Document</span>
+            <span>Upload Document</span>
           </button>
         </div>
       </div>
 
       {/* Main Content Body */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 min-w-0">
         {documents.length === 0 ? (
           /* Empty / Welcome State matching Screenshot 2 UI */
-          <div className="h-full flex flex-col items-center justify-center text-center max-w-3xl mx-auto py-12 px-4">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-600 p-[1px] shadow-glow-cyan mb-6 animate-float">
+          <div className="h-full flex flex-col items-center justify-center text-center max-w-3xl mx-auto py-8 sm:py-12 px-3 sm:px-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-600 p-[1px] shadow-glow-cyan mb-4 sm:mb-6 animate-float">
               <div className="w-full h-full bg-slate-950 rounded-[15px] flex items-center justify-center">
-                <Brain className="w-10 h-10 text-cyan-400" />
+                <Brain className="w-8 h-8 sm:w-10 sm:h-10 text-cyan-400" />
               </div>
             </div>
 
-            <h2 className="text-3xl font-bold text-white mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
               Welcome to <span className="text-gradient">Document Intelligence RAG</span>
             </h2>
 
-            <p className="text-sm text-gray-400 leading-relaxed mb-6 max-w-xl">
+            <p className="text-xs sm:text-sm text-gray-400 leading-relaxed mb-6 max-w-xl">
               Upload your documents, reports, or raw text to extract top-notch analytical insights using vector embeddings and Groq LLM reasoning.
             </p>
 
             <button
               onClick={() => setIsUploadModalOpen(true)}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-semibold text-sm shadow-glow-cyan flex items-center space-x-2 transition-all transform hover:scale-105 cursor-pointer"
+              className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-semibold text-xs sm:text-sm shadow-glow-cyan flex items-center space-x-2 transition-all transform hover:scale-105 cursor-pointer"
             >
-              <Upload className="w-5 h-5" />
+              <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
               <span>Select or Paste Document to Analyze</span>
             </button>
           </div>
         ) : (
           /* Q&A Conversation Timeline for Active Document */
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
             {messages.length === 0 ? (
-              <div className="text-center py-12 text-gray-400 glass-panel p-8 rounded-2xl border border-white/10 space-y-3">
-                <FileCheck className="w-12 h-12 text-cyan-400 mx-auto animate-pulse" />
-                <h3 className="text-lg font-semibold text-white">
+              <div className="text-center py-8 sm:py-12 text-gray-400 glass-panel p-5 sm:p-8 rounded-2xl border border-white/10 space-y-3">
+                <FileCheck className="w-10 h-10 sm:w-12 sm:h-12 text-cyan-400 mx-auto animate-pulse" />
+                <h3 className="text-base sm:text-lg font-semibold text-white">
                   Ready to analyze "{activeDoc?.title}"
                 </h3>
                 <p className="text-xs text-gray-400 max-w-md mx-auto">
@@ -362,36 +362,36 @@ export const DocumentAnalyzer: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className={`flex space-x-4 ${isUser ? 'justify-end' : 'justify-start'}`}
+                    className={`flex space-x-2.5 sm:space-x-4 ${isUser ? 'justify-end' : 'justify-start'}`}
                   >
                     {!isUser && (
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-500 to-cyan-500 p-[1px] shrink-0 mt-1 shadow-glow-violet">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-purple-500 to-cyan-500 p-[1px] shrink-0 mt-1 shadow-glow-violet">
                         <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
-                          <Bot className="w-5 h-5 text-cyan-300" />
+                          <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-300" />
                         </div>
                       </div>
                     )}
 
-                    <div className="space-y-2 max-w-[85%] sm:max-w-[78%]">
+                    <div className="space-y-1.5 sm:space-y-2 max-w-[88%] sm:max-w-[78%] min-w-0">
                       {/* Sender Header */}
-                      <div className={`flex items-center space-x-2 text-xs text-gray-400 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`flex items-center space-x-1.5 sm:space-x-2 text-[11px] sm:text-xs text-gray-400 ${isUser ? 'justify-end' : 'justify-start'}`}>
                         <span className="font-medium text-gray-300">
                           {isUser ? 'You' : 'Doc AI Analyzer'}
                         </span>
                         {!isUser && msg.modelUsed && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-cyan-300 font-mono">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] bg-white/10 text-cyan-300 font-mono truncate max-w-[120px] sm:max-w-none">
                             {msg.modelUsed}
                           </span>
                         )}
                         <span>•</span>
-                        <span>
+                        <span className="text-[10px] sm:text-xs">
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
 
                       {/* Bubble */}
                       <div
-                        className={`p-4 rounded-2xl text-sm leading-relaxed relative group ${
+                        className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed relative group ${
                           isUser
                             ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white rounded-tr-xs shadow-md'
                             : 'bg-slate-900/90 text-gray-100 border border-white/10 rounded-tl-xs glass-panel'
@@ -415,19 +415,19 @@ export const DocumentAnalyzer: React.FC = () => {
 
                       {/* Source Chunks Citation Drawer Toggle */}
                       {hasChunks && (
-                        <div className="pt-1">
+                        <div className="pt-0.5">
                           <button
                             onClick={() => setExpandedSourceId(isExpanded ? null : msg.id)}
-                            className="flex items-center space-x-1.5 text-xs px-3 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all cursor-pointer"
+                            className="flex items-center space-x-1.5 text-[11px] sm:text-xs px-2.5 sm:px-3 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all cursor-pointer"
                           >
-                            <Search className="w-3.5 h-3.5 text-cyan-400" />
-                            <span className="font-medium">
-                              Retrieved {msg.chunksUsed!.length} Source Document Chunks
+                            <Search className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                            <span className="font-medium truncate">
+                              Retrieved {msg.chunksUsed!.length} Source Chunks
                             </span>
                             {isExpanded ? (
-                              <ChevronUp className="w-3 h-3 text-cyan-400" />
+                              <ChevronUp className="w-3 h-3 text-cyan-400 shrink-0" />
                             ) : (
-                              <ChevronDown className="w-3 h-3 text-cyan-400" />
+                              <ChevronDown className="w-3 h-3 text-cyan-400 shrink-0" />
                             )}
                           </button>
 
@@ -438,14 +438,14 @@ export const DocumentAnalyzer: React.FC = () => {
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
                                 exit={{ opacity: 0, height: 0 }}
-                                className="mt-3 space-y-2 overflow-hidden"
+                                className="mt-2.5 space-y-2 overflow-hidden"
                               >
                                 {msg.chunksUsed!.map((chunk) => (
                                   <div
                                     key={chunk.id}
-                                    className="p-3 rounded-xl bg-slate-900/90 border border-cyan-500/30 text-xs space-y-1"
+                                    className="p-2.5 sm:p-3 rounded-xl bg-slate-900/90 border border-cyan-500/30 text-xs space-y-1"
                                   >
-                                    <div className="flex items-center justify-between text-[11px] text-cyan-400 font-medium">
+                                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-cyan-400 font-medium">
                                       <span>Doc Chunk #{chunk.chunkIndex}</span>
                                       {chunk.similarity && (
                                         <span className="bg-cyan-500/20 px-2 py-0.5 rounded text-cyan-300 border border-cyan-500/30">
@@ -453,7 +453,7 @@ export const DocumentAnalyzer: React.FC = () => {
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-gray-300 italic leading-relaxed bg-black/30 p-2 rounded-lg border border-white/5">
+                                    <p className="text-gray-300 italic leading-relaxed bg-black/30 p-2 rounded-lg border border-white/5 text-[11px] sm:text-xs">
                                       "{chunk.chunkContent}"
                                     </p>
                                   </div>
@@ -466,9 +466,9 @@ export const DocumentAnalyzer: React.FC = () => {
                     </div>
 
                     {isUser && (
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 p-[1px] shrink-0 mt-1">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 p-[1px] shrink-0 mt-1">
                         <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
-                          <User className="w-5 h-5 text-cyan-400" />
+                          <User className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
                         </div>
                       </div>
                     )}
@@ -482,16 +482,16 @@ export const DocumentAnalyzer: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex space-x-4 items-start"
+                className="flex space-x-2.5 sm:space-x-4 items-start"
               >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-500 to-cyan-500 p-[1px] shrink-0 shadow-glow-violet">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-purple-500 to-cyan-500 p-[1px] shrink-0 shadow-glow-violet">
                   <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-cyan-300 animate-spin" />
+                    <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-300 animate-spin" />
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-900/90 border border-white/10 glass-panel rounded-tl-xs flex items-center space-x-3">
-                  <div className="flex space-x-1.5">
+                <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/90 border border-white/10 glass-panel rounded-tl-xs flex items-center space-x-2.5 sm:space-x-3">
+                  <div className="flex space-x-1.5 shrink-0">
                     <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
                     <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
                     <div className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -508,12 +508,12 @@ export const DocumentAnalyzer: React.FC = () => {
         )}
       </div>
 
-      {/* Input Box matching Screenshot 2 */}
+      {/* Input Box matching Chat timeline */}
       {selectedDocId && (
-        <div className="w-full max-w-4xl mx-auto px-4 pb-6 pt-2 shrink-0">
+        <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 pb-3 sm:pb-6 pt-1 sm:pt-2 shrink-0">
           <form
             onSubmit={handleSendQuery}
-            className="relative flex items-end bg-slate-900/90 border border-white/15 focus-within:border-cyan-500/60 rounded-2xl p-2 shadow-2xl glass-panel transition-all"
+            className="relative flex items-end bg-slate-900/90 border border-white/15 focus-within:border-cyan-500/60 rounded-2xl p-1.5 sm:p-2 shadow-2xl glass-panel transition-all"
           >
             <textarea
               ref={textareaRef}
@@ -525,32 +525,33 @@ export const DocumentAnalyzer: React.FC = () => {
                   handleSendQuery();
                 }
               }}
-              placeholder={`Ask any question or prompt about "${activeDoc?.title || 'document'}"... (Press Enter to send)`}
+              placeholder={`Ask any question about "${activeDoc?.title || 'document'}"...`}
               rows={1}
               disabled={isQuerying}
-              className="w-full bg-transparent text-gray-100 placeholder-gray-500 px-3 py-2 text-sm focus:outline-none resize-none max-h-40 min-h-[44px]"
+              className="w-full bg-transparent text-gray-100 placeholder-gray-500 px-2.5 sm:px-3 py-2 text-xs sm:text-sm focus:outline-none resize-none max-h-40 min-h-[40px] sm:min-h-[44px]"
             />
 
             <button
               type="submit"
               disabled={!questionText.trim() || isQuerying}
-              className={`p-3 rounded-xl transition-all duration-200 shrink-0 ${
+              className={`p-2.5 sm:p-3 rounded-xl transition-all duration-200 shrink-0 ${
                 questionText.trim() && !isQuerying
                   ? 'bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-glow-cyan transform active:scale-95 cursor-pointer'
                   : 'bg-white/5 text-gray-600 cursor-not-allowed'
               }`}
+              aria-label="Send Query"
             >
               {isQuerying ? (
-                <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-cyan-400" />
               ) : (
-                <Send className="w-5 h-5" />
+                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </button>
           </form>
 
-          <div className="flex items-center justify-between text-[11px] text-gray-500 mt-2 px-2">
-            <span>Groq RAG Pipeline • Hugging Face Vector Similarity</span>
-            <span>Press <kbd className="bg-white/10 px-1 py-0.5 rounded text-gray-400">Shift</kbd> + <kbd className="bg-white/10 px-1 py-0.5 rounded text-gray-400">Enter</kbd> for new line</span>
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-gray-500 mt-1.5 px-2">
+            <span className="truncate">Groq RAG • Hugging Face Vector Similarity</span>
+            <span className="hidden sm:inline">Press <kbd className="bg-white/10 px-1 py-0.5 rounded text-gray-400">Shift</kbd> + <kbd className="bg-white/10 px-1 py-0.5 rounded text-gray-400">Enter</kbd> for new line</span>
           </div>
         </div>
       )}
@@ -558,52 +559,52 @@ export const DocumentAnalyzer: React.FC = () => {
       {/* Upload Document Modal */}
       <AnimatePresence>
         {isUploadModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-xl bg-slate-950 border border-white/15 rounded-2xl shadow-2xl glass-panel overflow-hidden"
+              className="w-full max-w-xl max-h-[92vh] flex flex-col bg-slate-950 border border-white/15 rounded-2xl shadow-2xl glass-panel overflow-hidden"
             >
-              <div className="p-6 border-b border-white/10 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+              <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between shrink-0">
+                <div className="flex items-center space-x-2.5 sm:space-x-3">
                   <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                    <Upload className="w-5 h-5" />
+                    <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-base">Ingest Document for RAG</h3>
-                    <p className="text-xs text-gray-400">
-                      Upload PDF, DOCX, text files, or paste raw text to build vector chunk index.
+                    <h3 className="font-bold text-white text-sm sm:text-base">Ingest Document for RAG</h3>
+                    <p className="text-[11px] sm:text-xs text-gray-400">
+                      Upload PDF, DOCX, text files, or paste raw text.
                     </p>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setIsUploadModalOpen(false)}
-                  className="text-gray-400 hover:text-white text-sm"
+                  className="p-1.5 text-gray-400 hover:text-white text-sm"
                 >
                   ✕
                 </button>
               </div>
 
-              <form onSubmit={handleIngestDocument} className="p-6 space-y-4">
+              <form onSubmit={handleIngestDocument} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
                 {/* Mode Tabs */}
                 <div className="flex bg-slate-900 rounded-xl p-1 border border-white/10">
                   <button
                     type="button"
                     onClick={() => setInputTab('file')}
-                    className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+                    className={`flex-1 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold rounded-lg transition-all ${
                       inputTab === 'file'
                         ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                         : 'text-gray-400 hover:text-white'
                     }`}
                   >
-                    Upload File (.pdf, .docx, .txt, .md, .csv)
+                    Upload File (.pdf, .docx, .txt...)
                   </button>
                   <button
                     type="button"
                     onClick={() => setInputTab('paste')}
-                    className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+                    className={`flex-1 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold rounded-lg transition-all ${
                       inputTab === 'paste'
                         ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
                         : 'text-gray-400 hover:text-white'
@@ -621,10 +622,10 @@ export const DocumentAnalyzer: React.FC = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Financial Report Q3, API Specs, User Manual..."
+                    placeholder="e.g. Financial Report Q3, API Specs..."
                     value={uploadTitle}
                     onChange={(e) => setUploadTitle(e.target.value)}
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60"
+                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500/60"
                   />
                 </div>
 
@@ -635,14 +636,14 @@ export const DocumentAnalyzer: React.FC = () => {
                     </label>
                     <div
                       onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-white/20 hover:border-cyan-500/60 rounded-xl p-6 text-center cursor-pointer bg-slate-900/50 hover:bg-cyan-500/5 transition-all space-y-2"
+                      className="border-2 border-dashed border-white/20 hover:border-cyan-500/60 rounded-xl p-4 sm:p-6 text-center cursor-pointer bg-slate-900/50 hover:bg-cyan-500/5 transition-all space-y-2"
                     >
-                      <Upload className="w-8 h-8 text-cyan-400 mx-auto animate-bounce" />
-                      <p className="text-xs font-medium text-white">
-                        {selectedFile ? selectedFile.name : 'Click to browse or drag & drop file here'}
+                      <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-cyan-400 mx-auto animate-bounce" />
+                      <p className="text-xs font-medium text-white truncate max-w-xs mx-auto">
+                        {selectedFile ? selectedFile.name : 'Click to browse or drag & drop file'}
                       </p>
-                      <p className="text-[11px] text-gray-500">
-                        Supports PDF (.pdf), Word (.docx), TXT, MD, CSV, JSON & code files
+                      <p className="text-[10px] sm:text-[11px] text-gray-500">
+                        Supports PDF, Word (.docx), TXT, MD, CSV, JSON & code
                       </p>
                       <input
                         ref={fileInputRef}
@@ -659,21 +660,21 @@ export const DocumentAnalyzer: React.FC = () => {
                       Paste Document Content
                     </label>
                     <textarea
-                      rows={6}
+                      rows={5}
                       required
                       placeholder="Paste your document content here..."
                       value={uploadContent}
                       onChange={(e) => setUploadContent(e.target.value)}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-purple-500/60 resize-none font-mono text-xs"
+                      className="w-full bg-slate-900 border border-white/10 rounded-xl p-2.5 sm:p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-purple-500/60 resize-none font-mono"
                     />
                   </div>
                 )}
 
-                <div className="pt-2 flex items-center justify-end space-x-3">
+                <div className="pt-2 flex items-center justify-end space-x-2 sm:space-x-3">
                   <button
                     type="button"
                     onClick={() => setIsUploadModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                    className="px-3.5 sm:px-4 py-2 rounded-xl text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
                   >
                     Cancel
                   </button>
@@ -684,17 +685,17 @@ export const DocumentAnalyzer: React.FC = () => {
                       (inputTab === 'paste' ? !uploadContent.trim() : !selectedFile) ||
                       isIngesting
                     }
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-medium text-xs shadow-glow-cyan flex items-center space-x-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-medium text-xs shadow-glow-cyan flex items-center space-x-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isIngesting ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin text-cyan-300" />
-                        <span>Parsing, Chunking & Vectorizing...</span>
+                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-cyan-300" />
+                        <span>Vectorizing...</span>
                       </>
                     ) : (
                       <>
-                        <Brain className="w-4 h-4 text-cyan-300" />
-                        <span>Process & Build RAG Index</span>
+                        <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300" />
+                        <span>Process & Build Index</span>
                       </>
                     )}
                   </button>

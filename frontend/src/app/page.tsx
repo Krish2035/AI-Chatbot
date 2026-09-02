@@ -17,6 +17,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isDbConnected, setIsDbConnected] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
   // Modals state
   const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
@@ -69,6 +70,7 @@ export default function Home() {
       setSessions((prev) => [newSess, ...prev]);
       setActiveSessionId(newSess.id);
       setMessages([]);
+      setIsSidebarOpen(false);
     } catch (err) {
       console.error('Error creating new session:', err);
     }
@@ -151,28 +153,35 @@ export default function Home() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         isDbConnected={isDbConnected}
         activeViewMode={activeViewMode}
-        onToggleViewMode={(mode) => setActiveViewMode(mode)}
+        onToggleViewMode={(mode) => {
+          setActiveViewMode(mode);
+          setIsSidebarOpen(false);
+        }}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
       />
 
       {/* Main App Body */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left Sidebar */}
+        {/* Left Sidebar (Responsive Drawer on Mobile, Fixed on Desktop) */}
         <Sidebar
           sessions={sessions}
           activeSessionId={activeSessionId}
           onSelectSession={(id) => {
             setActiveSessionId(id);
             setActiveViewMode('chat');
+            setIsSidebarOpen(false);
           }}
           onNewSession={handleNewSession}
           onDeleteSession={handleDeleteSession}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
         />
 
         {/* View Switcher: Document Analyzer vs Chat Timeline */}
         {activeViewMode === 'doc-analysis' ? (
           <DocumentAnalyzer />
         ) : (
-          <main className="flex-1 flex flex-col h-full bg-gradient-to-b from-slate-950 via-slate-900/60 to-slate-950 overflow-hidden relative">
+          <main className="flex-1 flex flex-col h-full bg-gradient-to-b from-slate-950 via-slate-900/60 to-slate-950 overflow-hidden relative min-w-0">
             <ChatWindow
               messages={messages}
               isLoading={isLoading}
