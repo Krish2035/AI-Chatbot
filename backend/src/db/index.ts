@@ -9,11 +9,18 @@ dotenv.config();
 
 const connectionString = process.env.DATABASE_URL || `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'postgres'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'ai_chatbot'}`;
 
+const isCloudDb = Boolean(
+  process.env.DATABASE_URL && 
+  !process.env.DATABASE_URL.includes('localhost') && 
+  !process.env.DATABASE_URL.includes('127.0.0.1')
+);
+
 export const pool = new Pool({
   connectionString,
+  ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // 10s gives Neon serverless compute time to spin up
 });
 
 // Prevent unhandled pool background error events when database is offline
@@ -28,10 +35,15 @@ export const checkDbConnection = async (): Promise<boolean> => {
     const client = await pool.connect();
     await pgvector.registerType(client);
 
-    // Auto-sync schema tables (creates missing documents, document_chunks tables if not exist)
+    // Auto-sync schema tables (creates missing tables, vector extensions if not exist)
     try {
-      const schemaPath = path.join(__dirname, 'schema.sql');
-      if (fs.existsSync(schemaPath)) {
+      const possiblePaths = [
+        path.join(__dirname, 'schema.sql'),
+        path.join(process.cwd(), 'src', 'db', 'schema.sql'),
+        path.join(process.cwd(), 'backend', 'src', 'db', 'schema.sql'),
+      ];
+      const schemaPath = possiblePaths.find((p) => fs.existsSync(p));
+      if (schemaPath) {
         const sql = fs.readFileSync(schemaPath, 'utf8');
         await client.query(sql);
       }
@@ -46,7 +58,7 @@ export const checkDbConnection = async (): Promise<boolean> => {
     return true;
   } catch (error: any) {
     isDbConnected = false;
-    console.log('ℹ️ Local PostgreSQL not detected on port 5432.');
+    console.warn('ℹ️ PostgreSQL not connected:', error.message || error);
     console.log('⚡ Running in In-Memory Vector Fallback Mode (Chat, Memory & Vector Search are active!).');
     return false;
   }
