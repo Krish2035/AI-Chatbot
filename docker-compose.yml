@@ -1,0 +1,131 @@
+services:
+  # ----------------------------------------------------
+  # 1. PostgreSQL with pgvector Semantic Vector Search
+  # ----------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: neurochat-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_chatbot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_chatbot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - neurochat-network
+
+  # ----------------------------------------------------
+  # 2. Redis High-Speed Cache & BullMQ Background Queue
+  # ----------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: neurochat-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - neurochat-network
+
+  # ----------------------------------------------------
+  # 3. AI Chatbot Express Backend (Node 20 + TypeScript)
+  # ----------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: neurochat-backend
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ai_chatbot
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-neurochat_super_secure_jwt_secret_token_2026}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-groq/compound}
+      HF_TOKEN: ${HF_TOKEN:-}
+      EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      CDN_ENABLED: "true"
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - neurochat-network
+
+  # ----------------------------------------------------
+  # 4. Next.js 14 Frontend UI (React 18 + Video Showcase)
+  # ----------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-}
+    container_name: neurochat-frontend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      BACKEND_INTERNAL_URL: http://backend:5000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - neurochat-network
+
+  # ----------------------------------------------------
+  # 5. Nginx Reverse Proxy & Load Balancer Gateway
+  # ----------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: neurochat-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - neurochat-network
+
+# ----------------------------------------------------
+# Volumes & Networks
+# ----------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  neurochat-network:
+    driver: bridge

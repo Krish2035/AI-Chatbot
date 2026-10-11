@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Brain, Cpu, Database, Sparkles, Settings, FileSearch, MessageSquare, Menu, Download, WifiOff, Wifi } from 'lucide-react';
+import { Brain, Cpu, Database, Sparkles, Settings, FileSearch, MessageSquare, Menu, Download, WifiOff, LogOut, UserCheck, LogIn } from 'lucide-react';
+import { AuthUser } from '../lib/api';
 
 interface HeaderProps {
   onOpenSettings: () => void;
@@ -10,6 +11,9 @@ interface HeaderProps {
   onToggleViewMode: (mode: 'chat' | 'doc-analysis') => void;
   onToggleSidebar?: () => void;
   isOnline?: boolean;
+  currentUser?: AuthUser | null;
+  onLogout?: () => void;
+  onOpenAuth?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,6 +23,9 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleViewMode,
   onToggleSidebar,
   isOnline = true,
+  currentUser,
+  onLogout,
+  onOpenAuth,
 }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
@@ -171,7 +178,49 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
+
+        {/* User Account & Logout */}
+        {currentUser ? (
+          <div className="flex items-center space-x-2 pl-1 border-l border-white/10 shrink-0">
+            <div
+              className="flex items-center space-x-2 px-2.5 py-1 rounded-xl glass-pill max-w-[150px] truncate"
+              title={`Logged in as ${currentUser.username} (${currentUser.email})`}
+            >
+              {currentUser.avatarUrl ? (
+                <img
+                  src={currentUser.avatarUrl}
+                  alt={currentUser.username}
+                  className="w-5 h-5 rounded-full object-cover border border-cyan-400"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold text-white uppercase shrink-0">
+                  {currentUser.username ? currentUser.username.charAt(0) : 'U'}
+                </div>
+              )}
+              <span className="text-xs text-gray-200 font-medium truncate hidden md:inline">
+                {currentUser.username}
+              </span>
+            </div>
+            <button
+              onClick={onLogout}
+              className="p-2 rounded-xl glass-pill text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onOpenAuth}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white text-xs font-semibold hover:shadow-glow-cyan transition-all cursor-pointer shrink-0"
+            title="Sign In / Create Account"
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            <span className="hidden xs:inline">Sign In</span>
+          </button>
+        )}
       </div>
     </header>
   );
 };
+

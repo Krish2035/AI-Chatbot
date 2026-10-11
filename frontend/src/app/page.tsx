@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { api, Session, Message, RecalledMemory } from '../lib/api';
+import { api, Session, Message, RecalledMemory, AuthUser } from '../lib/api';
 import { offlineStorage } from '../lib/offlineStorage';
 import { offlineAiEngine } from '../lib/offlineAiEngine';
 import { Header } from '../components/Header';
@@ -11,8 +11,13 @@ import { MessageInput } from '../components/MessageInput';
 import { DocumentAnalyzer } from '../components/DocumentAnalyzer';
 import { MemoryInspectorModal } from '../components/MemoryInspectorModal';
 import { SettingsModal } from '../components/SettingsModal';
+import { AuthPage } from '../components/AuthPage';
 
 export default function Home() {
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
+
   const [activeViewMode, setActiveViewMode] = useState<'chat' | 'doc-analysis'>('chat');
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -28,7 +33,29 @@ export default function Home() {
   const [inspectedQuery, setInspectedQuery] = useState<string | undefined>();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // 1. Connection listener
+  // 1. Check stored authentication session on mount
+  useEffect(() => {
+    const storedUser = api.getStoredUser();
+    const token = api.getStoredToken();
+
+    if (storedUser && token) {
+      setCurrentUser(storedUser);
+      // Verify/refresh user profile with backend
+      api.getMe()
+        .then((res) => {
+          if (res.user) {
+            setCurrentUser(res.user);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('neurochat_user', JSON.stringify(res.user));
+            }
+          }
+        })
+        .catch(() => {});
+    }
+    setIsCheckingAuth(false);
+  }, []);
+
+  // 2. Connection listener
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setIsOnline(navigator.onLine);
@@ -46,10 +73,12 @@ export default function Home() {
     }
   }, []);
 
-  // 2. Initial health check & fetch sessions (with offline caching)
+  // 3. Initial health check & fetch sessions whenever user or guest state changes
   useEffect(() => {
+    if (!currentUser && !isGuestMode) return;
+
     async function init() {
-      // First load from offline storage for instant PWA startup
+      // First load from offline storage for instant startup
       const cachedSessions = offlineStorage.getSessions();
       if (cachedSessions.length > 0) {
         setSessions(cachedSessions);
@@ -73,9 +102,9 @@ export default function Home() {
       }
     }
     init();
-  }, []);
+  }, [currentUser, isGuestMode]);
 
-  // 3. Fetch messages whenever activeSessionId changes
+  // 4. Fetch messages whenever activeSessionId changes
   useEffect(() => {
     if (!activeSessionId) {
       setMessages([]);
@@ -266,9 +295,45 @@ export default function Home() {
     setIsMemoryModalOpen(true);
   };
 
+  const handleLogout = () => {
+    api.logout();
+    setCurrentUser(null);
+    setIsGuestMode(false);
+    setSessions([]);
+    setMessages([]);
+    setActiveSessionId(null);
+  };
+
+  // While initializing authentication session
+  if (isCheckingAuth) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-950 text-cyan-400">
+        <div className="flex flex-col items-center space-y-3">
+          <div className="w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-medium text-gray-400">Loading NeuroChat AI...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is not authenticated and has not chosen guest mode: Show Sign In / Sign Up as the Home Page!
+  if (!currentUser && !isGuestMode) {
+    return (
+      <AuthPage
+        onAuthSuccess={(user) => {
+          setCurrentUser(user);
+          setIsGuestMode(false);
+        }}
+        onContinueAsGuest={() => {
+          setIsGuestMode(true);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-950">
-      {/* Top Header with Offline Indicator & PWA Install */}
+      {/* Top Header with Offline Indicator, PWA Install & User Info */}
       <Header
         onOpenSettings={() => setIsSettingsOpen(true)}
         isDbConnected={isDbConnected}
@@ -279,6 +344,12 @@ export default function Home() {
         }}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         isOnline={isOnline}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onOpenAuth={() => {
+          setIsGuestMode(false);
+          setCurrentUser(null);
+        }}
       />
 
       {/* Main App Body */}

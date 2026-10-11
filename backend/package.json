@@ -7,6 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "cluster": "ts-node src/cluster.ts",
     "db:setup": "ts-node src/db/setupDb.ts"
   },
   "dependencies": {
@@ -16,10 +17,17 @@
     "@types/node": "^20.16.5",
     "@types/pdf-parse": "^1.1.5",
     "@types/pg": "^8.11.10",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^6.3.12",
+    "compression": "^1.8.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.45.4",
     "express": "^4.21.0",
+    "express-rate-limit": "^8.7.1",
     "groq-sdk": "^0.7.0",
+    "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
     "mammoth": "^1.12.2",
     "pdf-parse": "^1.1.1",
     "pg": "^8.13.0",
@@ -28,5 +36,11 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.6.2",
     "unpdf": "^1.8.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.8.1",
+    "@types/jsonwebtoken": "^9.0.10",
+    "drizzle-kit": "^0.31.11"
   }
 }

@@ -2,17 +2,30 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Users Table
+-- 1. Users Table with Authentication Support
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(255) UNIQUE NOT NULL DEFAULT 'default_user',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    username VARCHAR(255) NOT NULL DEFAULT 'User',
+    email VARCHAR(255) UNIQUE,
+    password_hash TEXT,
+    avatar_url TEXT,
+    provider VARCHAR(50) DEFAULT 'local',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Backward compatibility columns migration if table already exists
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS provider VARCHAR(50) DEFAULT 'local';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
 -- Insert default user if not exists
-INSERT INTO users (id, username) 
-VALUES ('00000000-0000-0000-0000-000000000001', 'default_user')
-ON CONFLICT (username) DO NOTHING;
+INSERT INTO users (id, username, email) 
+VALUES ('00000000-0000-0000-0000-000000000001', 'default_user', 'guest@neurochat.local')
+ON CONFLICT (id) DO NOTHING;
+
 
 -- 2. Chat Sessions Table
 CREATE TABLE IF NOT EXISTS chat_sessions (
@@ -145,4 +158,47 @@ BEGIN
     LIMIT match_count;
 END;
 $$;
+
+-- 9. Performance & Search Indexes for Ultra-Fast Queries
+CREATE INDEX IF NOT EXISTS idx_messages_session_created ON messages (session_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_updated ON chat_sessions (user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_documents_user ON documents (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_doc ON document_chunks (document_id, chunk_index);
+
+-- 10. GIN Full-Text Search Indexes for instant keyword & conversation search
+CREATE INDEX IF NOT EXISTS idx_messages_fts ON messages USING gin(to_tsvector('english', content));
+CREATE INDEX IF NOT EXISTS idx_document_chunks_fts ON document_chunks USING gin(to_tsvector('english', chunk_content));
+
+-- 11. Stored Function for Full-Text Search across User's Chat Messages
+CREATE OR REPLACE FUNCTION search_messages_fts(
+    target_user_id UUID,
+    search_query TEXT,
+    limit_count INT DEFAULT 20
+)
+RETURNS TABLE (
+    id UUID,
+    session_id UUID,
+    role VARCHAR(20),
+    content TEXT,
+    rank REAL,
+    created_at TIMESTAMP WITH TIME ZONE
+)
+LANGUAGE sql
+AS $$
+    SELECT 
+        m.id,
+        m.session_id,
+        m.role,
+        m.content,
+        ts_rank(to_tsvector('english', m.content), plainto_tsquery('english', search_query)) AS rank,
+        m.created_at
+    FROM messages m
+    JOIN chat_sessions s ON s.id = m.session_id
+    WHERE s.user_id = target_user_id
+      AND to_tsvector('english', m.content) @@ plainto_tsquery('english', search_query)
+    ORDER BY rank DESC, m.created_at DESC
+    LIMIT limit_count;
+$$;
+
 

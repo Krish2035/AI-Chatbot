@@ -2,6 +2,14 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  username: string;
+  avatarUrl?: string;
+  provider?: string;
+}
+
 export interface Session {
   id: string;
   title: string;
@@ -55,7 +63,83 @@ export interface DocumentQueryResponse {
   chunksUsed: DocumentChunkRecord[];
 }
 
+// Setup Axios token interceptor
+axios.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('neurochat_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
 export const api = {
+  // Authentication methods
+  async signup(email: string, password: string, username?: string): Promise<{ user: AuthUser; token: string }> {
+    const res = await axios.post(`${API_BASE_URL}/auth/signup`, { email, password, username });
+    if (res.data.token && typeof window !== 'undefined') {
+      localStorage.setItem('neurochat_token', res.data.token);
+      localStorage.setItem('neurochat_user', JSON.stringify(res.data.user));
+    }
+    return res.data;
+  },
+
+  async signin(email: string, password: string): Promise<{ user: AuthUser; token: string }> {
+    const res = await axios.post(`${API_BASE_URL}/auth/signin`, { email, password });
+    if (res.data.token && typeof window !== 'undefined') {
+      localStorage.setItem('neurochat_token', res.data.token);
+      localStorage.setItem('neurochat_user', JSON.stringify(res.data.user));
+    }
+    return res.data;
+  },
+
+  async continueWithGoogle(googleData: {
+    email: string;
+    displayName?: string;
+    photoURL?: string;
+    uid?: string;
+    idToken?: string;
+  }): Promise<{ user: AuthUser; token: string }> {
+    const res = await axios.post(`${API_BASE_URL}/auth/google`, googleData);
+    if (res.data.token && typeof window !== 'undefined') {
+      localStorage.setItem('neurochat_token', res.data.token);
+      localStorage.setItem('neurochat_user', JSON.stringify(res.data.user));
+    }
+    return res.data;
+  },
+
+  async getMe(): Promise<{ user: AuthUser | null; isGuest: boolean }> {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/auth/me`);
+      return res.data;
+    } catch {
+      return { user: null, isGuest: true };
+    }
+  },
+
+  logout(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('neurochat_token');
+      localStorage.removeItem('neurochat_user');
+    }
+  },
+
+  getStoredUser(): AuthUser | null {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem('neurochat_user');
+    try {
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  getStoredToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('neurochat_token');
+  },
+
   // Check backend health
   async checkHealth() {
     try {
@@ -97,6 +181,14 @@ export const api = {
   }> {
     const res = await axios.post(`${API_BASE_URL}/chat/message`, { content, sessionId });
     return res.data;
+  },
+
+  // Full-text search
+  async search(query: string, sessionId?: string) {
+    const res = await axios.get(`${API_BASE_URL}/search`, {
+      params: { q: query, sessionId }
+    });
+    return res.data.results;
   },
 
   // Ingest Document (supports text, PDF, DOCX, etc.)

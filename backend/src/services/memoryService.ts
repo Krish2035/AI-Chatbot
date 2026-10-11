@@ -1,5 +1,6 @@
 import { pool, getDbStatus } from '../db';
 import { generateEmbedding, cosineSimilarity } from './embeddingService';
+import { queueManager } from './queueService';
 import pgvector from 'pgvector/pg';
 
 export interface SavedMemoryRecord {
@@ -10,6 +11,12 @@ export interface SavedMemoryRecord {
   similarity: number;
   createdAt: string;
 }
+
+// Register BullMQ background job for vector embeddings
+queueManager.registerJobType('embeddingQueue', async (data) => {
+  await saveMessageEmbedding(data.messageId, data.sessionId, data.userId, data.role, data.content);
+});
+
 
 // In-Memory Fallback storage if PostgreSQL database is not connected
 interface InMemoryEmbedding {

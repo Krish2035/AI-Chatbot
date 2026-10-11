@@ -7,21 +7,11 @@ import path from 'path';
 
 dotenv.config();
 
-const connectionString = process.env.DATABASE_URL || `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'postgres'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'ai_chatbot'}`;
+import { primaryPool, readPool, queryRead, queryWrite, hasReadReplica } from './replicaPool';
 
-const isCloudDb = Boolean(
-  process.env.DATABASE_URL && 
-  !process.env.DATABASE_URL.includes('localhost') && 
-  !process.env.DATABASE_URL.includes('127.0.0.1')
-);
+export const pool = primaryPool;
+export { primaryPool, readPool, queryRead, queryWrite, hasReadReplica };
 
-export const pool = new Pool({
-  connectionString,
-  ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000, // 10s gives Neon serverless compute time to spin up
-});
 
 // Prevent unhandled pool background error events when database is offline
 pool.on('error', (err) => {

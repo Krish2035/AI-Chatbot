@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
-import { pool, getDbStatus } from '../db';
+import crypto from 'crypto';
+import { pool, getDbStatus, queryRead, queryWrite } from '../db';
 import { saveMessageEmbedding, recallPastMemories } from '../services/memoryService';
 import { generateGroqResponse, ChatMessageParam } from '../services/groqService';
-import crypto from 'crypto';
+import { cacheService } from '../services/cacheService';
+import { queueManager } from '../services/queueService';
 
 const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -33,17 +35,32 @@ const inMemoryMessages: MemoryMessage[] = [];
  */
 export async function getSessions(req: Request, res: Response) {
   try {
+    const userId = req.user?.id || DEFAULT_USER_ID;
+    const cacheKey = `sessions:${userId}`;
+
+    // Read from Redis / Memory cache
+    const cachedSessions = await cacheService.get(cacheKey);
+    if (cachedSessions) {
+      return res.json({ success: true, sessions: cachedSessions, cached: true });
+    }
+
     if (getDbStatus()) {
-      const result = await pool.query(
+      // Use Read Replica queryRead for scale
+      const result = await queryRead(
         `SELECT id, title, created_at AS "createdAt", updated_at AS "updatedAt" 
          FROM chat_sessions 
          WHERE user_id = $1 
          ORDER BY updated_at DESC`,
-        [DEFAULT_USER_ID]
+        [userId]
       );
+
+      // Cache for 60 seconds
+      await cacheService.set(cacheKey, result.rows, 60);
+
       return res.json({ success: true, sessions: result.rows });
     } else {
-      return res.json({ success: true, sessions: inMemorySessions });
+      const userSessions = inMemorySessions.filter((s) => s.userId === userId || userId === DEFAULT_USER_ID);
+      return res.json({ success: true, sessions: userSessions });
     }
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -56,18 +73,21 @@ export async function getSessions(req: Request, res: Response) {
 export async function createSession(req: Request, res: Response) {
   const { title } = req.body;
   const sessionTitle = title || 'New Chat';
+  const userId = req.user?.id || DEFAULT_USER_ID;
 
   try {
     if (getDbStatus()) {
-      const result = await pool.query(
+      const result = await queryWrite(
         `INSERT INTO chat_sessions (user_id, title) VALUES ($1, $2) RETURNING id, title, created_at AS "createdAt"`,
-        [DEFAULT_USER_ID, sessionTitle]
+        [userId, sessionTitle]
       );
+      // Invalidate user sessions cache
+      await cacheService.del(`sessions:${userId}`);
       return res.status(201).json({ success: true, session: result.rows[0] });
     } else {
       const newSession: MemorySession = {
         id: crypto.randomUUID(),
-        userId: DEFAULT_USER_ID,
+        userId: userId,
         title: sessionTitle,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -85,16 +105,22 @@ export async function createSession(req: Request, res: Response) {
  */
 export async function deleteSession(req: Request, res: Response) {
   const { sessionId } = req.params;
+  const userId = req.user?.id || DEFAULT_USER_ID;
 
   try {
     if (getDbStatus()) {
       if (isUUID(sessionId)) {
-        await pool.query('DELETE FROM chat_sessions WHERE id = $1', [sessionId]);
+        await queryWrite('DELETE FROM chat_sessions WHERE id = $1', [sessionId]);
       }
     } else {
       const index = inMemorySessions.findIndex(s => s.id === sessionId);
       if (index !== -1) inMemorySessions.splice(index, 1);
     }
+
+    // Invalidate caches
+    await cacheService.del(`sessions:${userId}`);
+    await cacheService.del(`session:${sessionId}:messages`);
+
     return res.json({ success: true, message: 'Session deleted successfully' });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -106,19 +132,30 @@ export async function deleteSession(req: Request, res: Response) {
  */
 export async function getSessionMessages(req: Request, res: Response) {
   const { sessionId } = req.params;
+  const cacheKey = `session:${sessionId}:messages`;
 
   try {
+    // Read from cache
+    const cached = await cacheService.get(cacheKey);
+    if (cached) {
+      return res.json({ success: true, messages: cached, cached: true });
+    }
+
     if (getDbStatus()) {
       if (!isUUID(sessionId)) {
         return res.json({ success: true, messages: [] });
       }
-      const result = await pool.query(
+      // Route read to Read Replica pool
+      const result = await queryRead(
         `SELECT id, session_id AS "sessionId", role, content, created_at AS "createdAt"
          FROM messages
          WHERE session_id = $1
          ORDER BY created_at ASC`,
         [sessionId]
       );
+      // Cache messages for 60 seconds
+      await cacheService.set(cacheKey, result.rows, 60);
+
       return res.json({ success: true, messages: result.rows });
     } else {
       const messages = inMemoryMessages.filter(m => m.sessionId === sessionId);
@@ -135,6 +172,7 @@ export async function getSessionMessages(req: Request, res: Response) {
  */
 export async function sendMessage(req: Request, res: Response) {
   const { sessionId, content } = req.body;
+  const userId = req.user?.id || DEFAULT_USER_ID;
 
   if (!content || !content.trim()) {
     return res.status(400).json({ success: false, error: 'Message content is required' });
@@ -147,27 +185,28 @@ export async function sendMessage(req: Request, res: Response) {
     if (!currentSessionId || !isUUID(currentSessionId)) {
       const titleSnippet = content.length > 30 ? `${content.substring(0, 30)}...` : content;
       if (getDbStatus()) {
-        const newSess = await pool.query(
+        const newSess = await queryWrite(
           `INSERT INTO chat_sessions (user_id, title) VALUES ($1, $2) RETURNING id`,
-          [DEFAULT_USER_ID, titleSnippet]
+          [userId, titleSnippet]
         );
         currentSessionId = newSess.rows[0].id;
       } else {
         currentSessionId = crypto.randomUUID();
         inMemorySessions.unshift({
           id: currentSessionId,
-          userId: DEFAULT_USER_ID,
+          userId: userId,
           title: titleSnippet,
           createdAt: new Date(),
           updatedAt: new Date()
         });
       }
+      await cacheService.del(`sessions:${userId}`);
     }
 
-    // 1. Fetch Short-Term History for current session
+    // 1. Fetch Short-Term History for current session using Read Replica
     let shortTermHistory: ChatMessageParam[] = [];
     if (getDbStatus()) {
-      const histResult = await pool.query(
+      const histResult = await queryRead(
         `SELECT role, content FROM messages WHERE session_id = $1 ORDER BY created_at ASC LIMIT 10`,
         [currentSessionId]
       );
@@ -182,7 +221,7 @@ export async function sendMessage(req: Request, res: Response) {
     // 2. Perform Long-Term Memory Recall via Hugging Face Vector Search
     const recalledMemories = await recallPastMemories(
       content,
-      DEFAULT_USER_ID,
+      userId,
       currentSessionId,
       5, // top 5 past memories
       0.20 // similarity threshold
@@ -191,11 +230,11 @@ export async function sendMessage(req: Request, res: Response) {
     // 3. Save User Message
     const userMsgId = crypto.randomUUID();
     if (getDbStatus()) {
-      await pool.query(
+      await queryWrite(
         `INSERT INTO messages (id, session_id, role, content) VALUES ($1, $2, $3, $4)`,
         [userMsgId, currentSessionId, 'user', content]
       );
-      await pool.query(
+      await queryWrite(
         `UPDATE chat_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
         [currentSessionId]
       );
@@ -209,8 +248,17 @@ export async function sendMessage(req: Request, res: Response) {
       });
     }
 
-    // Save Vector Embedding of User Message for Future Memory Recall
-    saveMessageEmbedding(userMsgId, currentSessionId, DEFAULT_USER_ID, 'user', content);
+    // Invalidate session messages cache
+    await cacheService.del(`session:${currentSessionId}:messages`);
+
+    // Offload Vector Embedding to BullMQ Queue for high throughput
+    queueManager.addJob('embeddingQueue', {
+      messageId: userMsgId,
+      sessionId: currentSessionId,
+      userId: userId,
+      role: 'user',
+      content,
+    });
 
     // 4. Generate AI response using Groq SDK (with injected memory context)
     const aiResponse = await generateGroqResponse(content, shortTermHistory, recalledMemories);
@@ -218,7 +266,7 @@ export async function sendMessage(req: Request, res: Response) {
     // 5. Save Assistant Message
     const assistantMsgId = crypto.randomUUID();
     if (getDbStatus()) {
-      await pool.query(
+      await queryWrite(
         `INSERT INTO messages (id, session_id, role, content) VALUES ($1, $2, $3, $4)`,
         [assistantMsgId, currentSessionId, 'assistant', aiResponse.text]
       );
@@ -231,6 +279,9 @@ export async function sendMessage(req: Request, res: Response) {
         createdAt: new Date()
       });
     }
+
+    // Invalidate cache
+    await cacheService.del(`session:${currentSessionId}:messages`);
 
     return res.json({
       success: true,

@@ -5,12 +5,13 @@ import {
   deleteDocument,
   queryDocument,
 } from '../controllers/documentController';
+import { optionalAuth } from '../middleware/authMiddleware';
 
 const router = Router();
 
-router.post('/process', processDocument);
-router.get('/', getDocuments);
-router.delete('/:id', deleteDocument);
-router.post('/:id/query', queryDocument);
+router.post('/process', optionalAuth, processDocument);
+router.get('/', optionalAuth, getDocuments);
+router.delete('/:id', optionalAuth, deleteDocument);
+router.post('/:id/query', optionalAuth, queryDocument);
 
 export default router;
