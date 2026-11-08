@@ -104,7 +104,7 @@ export const metadata: Metadata = {
   },
   category: 'technology',
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || '',
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || '-D3mET-DLurlI_3N4ftkZ7PyFG9AZ-JcgvmOsZUT_v0',
   },
 };
 
@@ -210,6 +210,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <meta name="google-site-verification" content="-D3mET-DLurlI_3N4ftkZ7PyFG9AZ-JcgvmOsZUT_v0" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
