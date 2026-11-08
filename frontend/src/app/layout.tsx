@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { PwaRegistrar } from '../components/PwaRegistrar';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ai-chatbot-vercel.vercel.app';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ai-chatbot-nine-delta.vercel.app';
 
 export const viewport: Viewport = {
   width: 'device-width',

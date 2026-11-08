@@ -8,6 +8,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **The premier open-source AI Chatbot on Vercel.** Built with **Next.js 14 App Router**, **Groq LLaMA 3** ultra-fast inference (500+ tokens/sec), **PostgreSQL pgvector** persistent cross-session memory recall, **Hugging Face** embeddings, and an **offline Progressive Web App (PWA)** fallback engine.
+>
+> 🌐 **Live Website**: [https://ai-chatbot-nine-delta.vercel.app](https://ai-chatbot-nine-delta.vercel.app)
 
 ---
 
@@ -29,7 +31,7 @@ You can deploy the frontend to Vercel in seconds:
 1. Click the **Deploy with Vercel** button above or import this repository in your [Vercel Dashboard](https://vercel.com/new).
 2. Set the Root Directory to `frontend`.
 3. Configure your Environment Variables:
-   * `NEXT_PUBLIC_SITE_URL`: Your Vercel production domain (e.g. `https://your-chatbot.vercel.app`)
+   * `NEXT_PUBLIC_SITE_URL`: Your Vercel production domain (`https://ai-chatbot-nine-delta.vercel.app`)
    * `NEXT_PUBLIC_API_URL`: Your backend API endpoint URL
    * `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`: Your Google Search Console verification code (optional)
    * `NEXT_PUBLIC_FIREBASE_*`: Your Firebase authentication credentials

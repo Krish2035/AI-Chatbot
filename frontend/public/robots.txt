@@ -12,5 +12,5 @@ Allow: /
 User-agent: bingbot
 Allow: /
 
-Sitemap: https://ai-chatbot-vercel.vercel.app/sitemap.xml
+Sitemap: https://ai-chatbot-nine-delta.vercel.app/sitemap.xml
 
