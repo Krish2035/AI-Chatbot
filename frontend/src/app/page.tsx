@@ -11,6 +11,7 @@ import { MessageInput } from '../components/MessageInput';
 import { DocumentAnalyzer } from '../components/DocumentAnalyzer';
 import { MemoryInspectorModal } from '../components/MemoryInspectorModal';
 import { SettingsModal } from '../components/SettingsModal';
+import { AboutSeoModal } from '../components/AboutSeoModal';
 import { AuthPage } from '../components/AuthPage';
 
 export default function Home() {
@@ -32,6 +33,7 @@ export default function Home() {
   const [inspectedMemories, setInspectedMemories] = useState<RecalledMemory[]>([]);
   const [inspectedQuery, setInspectedQuery] = useState<string | undefined>();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   // 1. Check stored authentication session on mount
   useEffect(() => {
@@ -307,10 +309,15 @@ export default function Home() {
   // While initializing authentication session
   if (isCheckingAuth) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-slate-950 text-cyan-400">
-        <div className="flex flex-col items-center space-y-3">
-          <div className="w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium text-gray-400">Loading NeuroChat AI...</span>
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-slate-950 text-cyan-400">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-12 h-12 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin shadow-glow-cyan" />
+          <div className="text-center">
+            <h1 className="text-base font-bold text-white tracking-wide">
+              AI Chatbot <span className="text-gradient">Vercel</span>
+            </h1>
+            <p className="text-xs text-gray-400 mt-1">Initializing Persistent Vector Memory...</p>
+          </div>
         </div>
       </div>
     );
@@ -319,15 +326,22 @@ export default function Home() {
   // If user is not authenticated and has not chosen guest mode: Show Sign In / Sign Up as the Home Page!
   if (!currentUser && !isGuestMode) {
     return (
-      <AuthPage
-        onAuthSuccess={(user) => {
-          setCurrentUser(user);
-          setIsGuestMode(false);
-        }}
-        onContinueAsGuest={() => {
-          setIsGuestMode(true);
-        }}
-      />
+      <>
+        <AuthPage
+          onAuthSuccess={(user) => {
+            setCurrentUser(user);
+            setIsGuestMode(false);
+          }}
+          onContinueAsGuest={() => {
+            setIsGuestMode(true);
+          }}
+          onOpenAbout={() => setIsAboutOpen(true)}
+        />
+        <AboutSeoModal
+          isOpen={isAboutOpen}
+          onClose={() => setIsAboutOpen(false)}
+        />
+      </>
     );
   }
 
@@ -336,6 +350,7 @@ export default function Home() {
       {/* Top Header with Offline Indicator, PWA Install & User Info */}
       <Header
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenAbout={() => setIsAboutOpen(true)}
         isDbConnected={isDbConnected}
         activeViewMode={activeViewMode}
         onToggleViewMode={(mode) => {
@@ -399,6 +414,11 @@ export default function Home() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         isDbConnected={isDbConnected}
+      />
+
+      <AboutSeoModal
+        isOpen={isAboutOpen}
+        onClose={() => setIsAboutOpen(false)}
       />
     </div>
   );

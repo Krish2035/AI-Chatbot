@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Brain, Cpu, Database, Sparkles, Settings, FileSearch, MessageSquare, Menu, Download, WifiOff, LogOut, UserCheck, LogIn } from 'lucide-react';
+import { Brain, Cpu, Database, Sparkles, Settings, FileSearch, MessageSquare, Menu, Download, WifiOff, LogOut, UserCheck, LogIn, Info } from 'lucide-react';
 import { AuthUser } from '../lib/api';
 
 interface HeaderProps {
   onOpenSettings: () => void;
+  onOpenAbout?: () => void;
   isDbConnected: boolean;
   activeViewMode: 'chat' | 'doc-analysis';
   onToggleViewMode: (mode: 'chat' | 'doc-analysis') => void;
@@ -18,6 +19,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
+  onOpenAbout,
   isDbConnected,
   activeViewMode,
   onToggleViewMode,
@@ -83,18 +85,20 @@ export const Header: React.FC<HeaderProps> = ({
         <div>
           <div className="flex items-center space-x-1.5 sm:space-x-2">
             <h1 className="font-bold text-base sm:text-lg text-white tracking-wide truncate">
-              NeuroChat <span className="text-gradient">AI</span>
+              AI Chatbot <span className="text-gradient">Vercel</span>
             </h1>
-            <span className="hidden xs:inline-block text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-              {activeViewMode === 'doc-analysis' ? 'Doc RAG' : 'Vector Memory'}
+            <span className="hidden xs:inline-block text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              NeuroChat AI
             </span>
           </div>
           <p className="text-[10px] sm:text-xs text-gray-400 flex items-center space-x-1 sm:space-x-2 truncate">
             {isOnline ? (
               <>
-                <span>Groq Llama 3</span>
+                <span>Next.js 14</span>
                 <span>•</span>
-                <span>HF Embeddings</span>
+                <span>Groq LLaMA 3</span>
+                <span>•</span>
+                <span>pgvector</span>
               </>
             ) : (
               <span className="text-amber-400 font-medium flex items-center space-x-1">
@@ -170,6 +174,16 @@ export const Header: React.FC<HeaderProps> = ({
           <Cpu className={`w-3.5 h-3.5 ${isOnline ? 'text-cyan-400' : 'text-amber-400'}`} />
           <span className="text-gray-300">{isOnline ? 'Groq Engine' : 'Local Offline Engine'}</span>
         </div>
+
+        {/* About & SEO Information Modal Trigger */}
+        <button
+          onClick={onOpenAbout}
+          className="p-2 rounded-xl glass-pill text-cyan-400 hover:text-white hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+          title="About AI Chatbot Vercel & Architecture"
+          aria-label="About AI Chatbot Vercel & Architecture"
+        >
+          <Info className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
 
         <button
           onClick={onOpenSettings}

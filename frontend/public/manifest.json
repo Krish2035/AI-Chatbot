@@ -1,14 +1,14 @@
 {
-  "name": "NeuroChat AI - Persistent Memory Chatbot",
-  "short_name": "NeuroChat",
-  "description": "AI Chatbot equipped with persistent vector memory and document intelligence RAG that works seamlessly online and offline.",
+  "name": "AI Chatbot Vercel - NeuroChat AI",
+  "short_name": "AI Chatbot",
+  "description": "Ultra-fast Next.js AI Chatbot deployed on Vercel with persistent PostgreSQL pgvector memory, Groq LLaMA 3, Hugging Face embeddings, and offline PWA support.",
   "start_url": "/",
   "id": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#090d16",
   "theme_color": "#06b6d4",
-  "categories": ["productivity", "utilities", "ai"],
+  "categories": ["productivity", "utilities", "ai", "developer"],
   "icons": [
     {
       "src": "/icons/icon-192.svg",
@@ -31,16 +31,16 @@
   ],
   "shortcuts": [
     {
-      "name": "New Conversation",
+      "name": "New AI Chat",
       "short_name": "New Chat",
-      "description": "Start a new conversation with NeuroChat AI",
+      "description": "Start a new conversation with AI Chatbot Vercel",
       "url": "/?action=new-chat",
       "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
     },
     {
-      "name": "Document Analyzer",
+      "name": "Document Analyzer RAG",
       "short_name": "Doc RAG",
-      "description": "Analyze documents and search vector chunks",
+      "description": "Analyze documents and search vector embeddings",
       "url": "/?mode=doc-analysis",
       "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
     }

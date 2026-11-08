@@ -17,7 +17,8 @@ import {
   AlertCircle,
   Cpu,
   FileSearch,
-  CheckCircle2
+  CheckCircle2,
+  Info
 } from 'lucide-react';
 import { api, AuthUser } from '../lib/api';
 import { signInWithGoogle } from '../lib/firebase';
@@ -25,9 +26,10 @@ import { signInWithGoogle } from '../lib/firebase';
 interface AuthPageProps {
   onAuthSuccess: (user: AuthUser) => void;
   onContinueAsGuest: () => void;
+  onOpenAbout?: () => void;
 }
 
-export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onContinueAsGuest }) => {
+export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onContinueAsGuest, onOpenAbout }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -141,13 +143,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onContinueAsG
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-extrabold text-xl text-white tracking-wide">
-                  NeuroChat <span className="text-gradient">AI</span>
+                  AI Chatbot <span className="text-gradient">Vercel</span>
                 </span>
                 <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                  v2.0
+                  NeuroChat AI v2.0
                 </span>
               </div>
-              <p className="text-xs text-gray-400">Neural Vector Architecture</p>
+              <p className="text-xs text-gray-400">Next.js 14 • Groq LLaMA 3 • pgvector</p>
             </div>
           </div>
 
@@ -162,14 +164,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onContinueAsG
           <div className="max-w-lg">
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-cyan-300 mb-3 backdrop-blur-md">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Persistent Cross-Session Vector Memory</span>
+              <span>AI Chatbot on Vercel with Persistent Vector Memory</span>
             </div>
 
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white leading-tight tracking-wide">
-              Intelligence That Remembers Every Detail.
+              Ultra-Fast AI Chatbot Deployed on Vercel.
             </h2>
             <p className="text-xs sm:text-sm text-gray-300 mt-2.5 leading-relaxed">
-              Equipped with PostgreSQL pgvector embeddings, Groq ultra-low latency inference, and multi-format document RAG analysis.
+              Experience the power of Groq LLaMA 3 inference, PostgreSQL pgvector persistent cross-session memory, and offline PWA capability in one unified platform.
             </p>
 
             {/* Feature Highlights Grid */}
@@ -413,8 +415,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onContinueAsG
               </button>
             </form>
 
-            {/* Quick Demo / Guest Mode */}
-            <div className="mt-5 pt-4 border-t border-white/10 text-center">
+            {/* Quick Demo / Guest Mode & SEO Info Modal */}
+            <div className="mt-5 pt-4 border-t border-white/10 text-center space-y-2">
               <button
                 type="button"
                 onClick={onContinueAsGuest}
@@ -423,6 +425,17 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, onContinueAsG
                 <span>Explore as Guest without account</span>
                 <Sparkles className="w-3.5 h-3.5 text-amber-400 inline" />
               </button>
+
+              {onOpenAbout && (
+                <button
+                  type="button"
+                  onClick={onOpenAbout}
+                  className="text-[11px] text-cyan-400/90 hover:text-cyan-300 font-medium transition-colors flex items-center justify-center space-x-1 mx-auto cursor-pointer"
+                >
+                  <Info className="w-3 h-3 text-cyan-400 inline" />
+                  <span>About AI Chatbot Vercel &amp; System Architecture</span>
+                </button>
+              )}
             </div>
           </div>
 

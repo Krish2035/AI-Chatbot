@@ -1,0 +1,16 @@
+# Robots.txt for AI Chatbot Vercel (NeuroChat AI)
+User-agent: *
+Allow: /
+Disallow: /api/
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: bingbot
+Allow: /
+
+Sitemap: https://ai-chatbot-vercel.vercel.app/sitemap.xml
+
