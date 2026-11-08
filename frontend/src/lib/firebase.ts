@@ -1,14 +1,14 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, Auth } from 'firebase/auth';
 
-// Safely loaded from environment variables with valid fallbacks to prevent Vercel SSR build failures
+// Loaded strictly from environment variables without hardcoded secrets
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDNaDUQzmlDvuSbMrI824jVY8le8gJLXRI',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'ai-chatbot-571b5.firebaseapp.com',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'ai-chatbot-571b5',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'ai-chatbot-571b5.firebasestorage.app',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '834699301736',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:834699301736:web:cfbd18d3122f1c6177bcdd',
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
 };
 
 // Lazy safe instance references (SSR and Next.js static prerendering safe)
@@ -16,12 +16,19 @@ let firebaseAppInstance: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 
 export function getFirebaseApp(): FirebaseApp | null {
+  // Never initialize Firebase on the server or during static prerendering
   if (typeof window === 'undefined') return null;
+  
+  // If no API key is provided in environment variables, skip initialization gracefully
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey.trim() === '') {
+    return null;
+  }
+
   if (!firebaseAppInstance) {
     try {
       firebaseAppInstance = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     } catch (err) {
-      console.warn('Firebase app initialization skipped during build/SSR:', err);
+      console.warn('Firebase app initialization skipped:', err);
     }
   }
   return firebaseAppInstance;
@@ -29,13 +36,15 @@ export function getFirebaseApp(): FirebaseApp | null {
 
 export function getFirebaseAuth(): Auth | null {
   if (typeof window === 'undefined') return null;
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey.trim() === '') return null;
+
   if (!authInstance) {
     const app = getFirebaseApp();
     if (app) {
       try {
         authInstance = getAuth(app);
       } catch (err) {
-        console.warn('Firebase getAuth skipped during build/SSR:', err);
+        console.warn('Firebase getAuth skipped:', err);
       }
     }
   }
@@ -46,9 +55,13 @@ export function getFirebaseAuth(): Auth | null {
  * Triggers Google OAuth sign-in popup using Firebase
  */
 export async function signInWithGoogle() {
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey.trim() === '') {
+    throw new Error('Google Sign-In is unavailable: NEXT_PUBLIC_FIREBASE_API_KEY is not configured in environment variables.');
+  }
+
   const auth = getFirebaseAuth();
   if (!auth) {
-    throw new Error('Firebase authentication is not initialized. Please ensure client-side execution.');
+    throw new Error('Firebase authentication could not be initialized.');
   }
 
   const googleProvider = new GoogleAuthProvider();
